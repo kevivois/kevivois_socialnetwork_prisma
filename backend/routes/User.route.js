@@ -3,7 +3,7 @@ import PrismaSingleton from '../Connection.js'; // Adjust the path to your file 
 
 import  {encryptPassword} from "../utils/encryption.utils.js";
 import passport from "passport";
-
+import * as HttpsCode from "../HttpsCode.js"
 import {checkAuthenticated} from "../middleware/auth/checkAuth.js"
 
 const router = express.Router()
@@ -20,18 +20,18 @@ router.post('/login', passport.authenticate('local', {
   // Logout Route
 router.post('/logout', (req, res) => {
     req.logout(err => {
-        if (err) return res.status(500).send('Logout failed');
+        if (err) return res.status(HttpsCode.SERVER_ERROR).send('Logout failed');
         res.send('Logged out successfully');
     });
 });
 
 router.get("/isAuth",(req,res) => {
     if(req.isAuthenticated()){
-        return res.send({
+        return res.status(HttpsCode.SUCESS).send({
             "message":"i am authenticated"
         })
     }
-    return res.send({
+    return res.status(HttpsCode.UNAUTHORIZED).send({
         "message":"i am not authenticated"
     })
 })
@@ -41,7 +41,7 @@ router.post("/create",async (req,res) => {
     try{
         if(!req.body.username || !req.body.password)
         {   
-            throw new Error("undefined variables in body for /create")
+            return res.status(HttpsCode.BAD_REQUEST)
         }
         let user = await client.user.findFirst({
             where:{
@@ -62,7 +62,7 @@ router.post("/create",async (req,res) => {
 
     }catch(e){
         console.log(e)
-        return res.sendStatus(400)
+        return res.sendStatus(HttpsCode.SERVER_ERROR)
     }
 })
 
