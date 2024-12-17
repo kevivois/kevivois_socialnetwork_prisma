@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String         @id @default(cuid())
+  username         String         @unique
+  email            String?         @unique
+  password         String
+  sentMessages     Message[]      @relation("ReceivedMessages")
+  receivedMessages Message[]      @relation("SentMessages")
+  notifications    Notification[]
+  posts            Post[]         @relation("UserPostRelation")
+  following        follows[]      @relation("followerUserRelation")
+  followers        follows[]      @relation("followingUserRelation")
+}
+
+model follows {
+  id          String @id @default(cuid())
+  followingId String
+  followerId  String
+  follower    User   @relation("followerUserRelation", fields: [followerId], references: [id])
+  following   User   @relation("followingUserRelation", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId])
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  content   String
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  parentId  String?
+  userId    String
+  parent    Post?     @relation("ParentPostRelation", fields: [parentId], references: [id])
+  childrens Post[]    @relation("ParentPostRelation")
+  user      User      @relation("UserPostRelation", fields: [userId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  content    String
+  createdAt  DateTime @default(now())
+  senderId   String
+  receiverId String
+  read       Boolean  @default(false)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  content   String
+  createdAt DateTime @default(now())
+  userId    String
+  read      Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+}
