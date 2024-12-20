@@ -1,6 +1,8 @@
+import * as HttpCode from "../../HttpsCode.js"
+
 export function checkAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
       return next();
     }
-    res.sendStatus(401)
+    res.sendStatus(HttpCode.UNAUTHORIZED)
 }

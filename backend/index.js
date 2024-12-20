@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import initializePassport from './passport-config.js'; // Adjust the path to your passport configuration
+import authRoute from './routes/Auth.route.js'; // Adjust the path to your User route
 import userRoute from './routes/User.route.js'; // Adjust the path to your User route
 import dotenv from "dotenv"
 import flash from "connect-flash"
@@ -44,6 +45,7 @@ initializePassport(passport);
 app.use(passport.initialize());
 app.use(passport.session());
 
+app.use("/auth",authRoute);
 app.use("/user",userRoute);
 
 

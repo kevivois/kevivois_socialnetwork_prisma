@@ -12,8 +12,12 @@ model User {
   username         String         @unique
   email            String?         @unique
   password         String
-  sentMessages     Message[]      @relation("ReceivedMessages")
-  receivedMessages Message[]      @relation("SentMessages")
+  sentMessages     Message[]      @relation("SentMessages")
+  conversations    Conversation[] @relation("ConversationsUsers")
+  adminConversations Conversation[] @relation("ConversationsAdminUsers")
+  notificationsActors Notification[] @relation("NotificationActorUser")
+  readMessages Message[] @relation("MessageReadUser")
+  invitedConversations Conversation[] @relation("UserInvitation")
   notifications    Notification[]
   posts            Post[]         @relation("UserPostRelation")
   following        follows[]      @relation("followerUserRelation")
@@ -36,29 +40,57 @@ model Post {
   createdAt DateTime  @default(now())
   editedAt  DateTime?
   parentId  String?
-  userId    String
+  authorId    String
+  notificationsRelated Notification[] @relation("NotificationRelatedPost") 
   parent    Post?     @relation("ParentPostRelation", fields: [parentId], references: [id])
   childrens Post[]    @relation("ParentPostRelation")
-  user      User      @relation("UserPostRelation", fields: [userId], references: [id])
+  author      User      @relation("UserPostRelation", fields: [authorId], references: [id])
+}
+
+model Conversation {
+  id String @id @default(cuid())
+  title String
+  description String?
+  notificationsRelated Notification[] @relation("NotificationRelatedConv")
+  invitedUsers User[] @relation("UserInvitation")
+  messages Message[] @relation("conversationMessages")
+  users User[] @relation("ConversationsUsers")
+  admins User[] @relation("ConversationsAdminUsers")
 }
 
 model Message {
   id         String   @id @default(cuid())
   content    String
   createdAt  DateTime @default(now())
-  senderId   String
-  receiverId String
-  read       Boolean  @default(false)
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  authorId   String
+  reads       User[] @relation("MessageReadUser")
+  conversationId String
+  conversation Conversation @relation("conversationMessages",fields: [conversationId],references: [id])
+  author     User     @relation("SentMessages", fields: [authorId], references: [id])
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  type      String
-  content   String
-  createdAt DateTime @default(now())
-  userId    String
-  read      Boolean  @default(false)
-  user      User     @relation(fields: [userId], references: [id])
+  id             String   @id @default(cuid())
+  type           NotificationType
+  content        String?  // Optional for dynamic text
+  createdAt      DateTime @default(now())
+  userId         String   // Target user receiving the notification
+  user           User     @relation(fields: [userId], references: [id])
+  actorId        String?  // Optional: User who performed the action
+  actor          User?    @relation("NotificationActorUser", fields: [actorId], references: [id])
+  relatedPostId  String?  // Optional: Reference to a related post
+  relatedPost    Post?    @relation("NotificationRelatedPost",fields: [relatedPostId], references: [id])
+  relatedConvId  String?  // Optional: Reference to a related conversation
+  relatedConv    Conversation? @relation("NotificationRelatedConv",fields: [relatedConvId], references: [id])
+  read           Boolean  @default(false)
+
+  @@index([type, createdAt]) // Useful for filtering by type or time
+}
+enum NotificationType {
+  FOLLOWED_USER
+  GROUP_INVITATION
+  POST_LIKED
+  COMMENT_REPLIED
+  NEW_MESSAGE
+  MENTION
 }

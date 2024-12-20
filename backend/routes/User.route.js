@@ -2,68 +2,133 @@ import express from "express"
 import PrismaSingleton from '../Connection.js'; // Adjust the path to your file if needed
 
 import  {encryptPassword} from "../utils/encryption.utils.js";
-import passport from "passport";
 import * as HttpsCode from "../HttpsCode.js"
 import {checkAuthenticated} from "../middleware/auth/checkAuth.js"
+import * as UserHelper from "./User.route.utils.js"
+
+
 
 const router = express.Router()
 
 const client = new PrismaSingleton().client;
 
+router.get("/me",[checkAuthenticated],async (req,res) => {
+    let userId = req.user.id;
+    let user = await client.user.findFirst({
+        where:{
+            id:userId
+        }
+    })
+    if(user){
+        return res.status(HttpsCode.SUCESS).json({
+            user:user
+        })
+    }else{
+        return res.sendStatus(HttpsCode.RECOURCE_NOT_FOUND);
+    }
+})
 
-router.post('/login', passport.authenticate('local', {
-    successRedirect: '/dashboard',
-    failureRedirect: '/',
-    failureFlash: true, // Use connect-flash for flash messages (optional)
-}));
-  
-  // Logout Route
-router.post('/logout', (req, res) => {
-    req.logout(err => {
-        if (err) return res.status(HttpsCode.SERVER_ERROR).send('Logout failed');
-        res.send('Logged out successfully');
-    });
+router.get("/conversations", [checkAuthenticated], async (req, res) => {
+    try {
+        let userId = req.user.id;
+
+        let conversations = await client.conversation.findMany({
+            where: {
+                users: {
+                    some: { id: userId } // Filter to include only conversations where the authenticated user is a participant
+                }
+            },
+            include: {
+                users: { // Include details of all users in the conversation
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                },
+                messages: { // Optionally include the messages in the conversation
+                    select: {
+                        id: true,
+                        content: true,
+                        createdAt: true,
+                        author: {
+                            select: {
+                                id: true,
+                                username: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        createdAt: "desc"
+                    },
+                    take: 10 
+                }
+            },
+            orderBy: {
+                id: "asc"
+            }
+        });
+
+        res.status(200).json({ conversations });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to retrieve conversations" });
+    }
 });
 
-router.get("/isAuth",(req,res) => {
-    if(req.isAuthenticated()){
-        return res.status(HttpsCode.SUCESS).send({
-            "message":"i am authenticated"
-        })
-    }
-    return res.status(HttpsCode.UNAUTHORIZED).send({
-        "message":"i am not authenticated"
-    })
-})
+router.post("/conversations/create", [checkAuthenticated], async (req, res) => {
+    try {
+        const { title, description, userIds } = req.body;
+        const creatorId = req.user.id;
 
-  
-router.post("/create",async (req,res) => {
-    try{
-        if(!req.body.username || !req.body.password)
-        {   
-            return res.status(HttpsCode.BAD_REQUEST)
-        }
-        let user = await client.user.findFirst({
-            where:{
-                username:req.body.username,
-            }
-        })
-        if(!user){
-            user = await client.user.create({
-                data:{
-                    username:req.body.username,
-                    password:encryptPassword(req.body.password)
+        const conversation = await client.conversation.create({
+            data: {
+                title,
+                Description:description,
+                users: {
+                    connect: [{ id: creatorId }] // The creator is added as a user
+                },
+                admins: {
+                    connect: [{ id: creatorId }] // The creator is also added as an admin
                 }
-            })
-            return res.send({"message":"user successfully created",user:user})
-        }else{
-            return res.send({"message":"username already existing"})
+            }
+        });
+        if (userIds != null && userIds.length > 0) {
+            const invitedUsers = [];
+            if(await UserHelper.areFriends(creatorId, userIds)){
+                for (const userId of userIds) {
+                        invitedUsers.push({ id: userId });
+                        // Optionally, create a notification for the invited user
+                        await client.notification.create({
+                            data: {
+                                type: client.NotificationType.GROUP_INVITATION,
+                                userId: userId,
+                                content: `${req.user.username} invited you to a new conversation.`,
+                                relatedConvId: conversation.id
+                            }
+                        });
+                }
+            }
+            if (invitedUsers.length > 0) {
+                await client.conversation.update({
+                    where: { id: conversation.id },
+                    data: {
+                        invitedUsers: {
+                            connect: invitedUsers
+                        }
+                    }
+                });
+            }
         }
 
-    }catch(e){
-        console.log(e)
-        return res.sendStatus(HttpsCode.SERVER_ERROR)
+
+        res.status(201).json({ message: "Conversation created", conversation });
+    } catch (error) {
+        console.error(error);
+        res.status(HttpsCode.BAD_REQUEST).json({ error: "Failed to create conversation" });
     }
-})
+});
+
+
+
 
 export default router;

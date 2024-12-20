@@ -29,7 +29,7 @@ function initialize(passport) {
   passport.use(new LocalStrategy({ usernameField: 'username' }, authenticateUser));
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id, done) => {
-    const user = await client.user.findMany({
+    const user = await client.user.findFirst({
       where:{
         id:id
       }
