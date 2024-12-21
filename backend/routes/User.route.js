@@ -127,6 +127,170 @@ router.post("/conversations/create", [checkAuthenticated], async (req, res) => {
         res.status(HttpsCode.BAD_REQUEST).json({ error: "Failed to create conversation" });
     }
 });
+router.get("/conversations/:id",[checkAuthenticated],async (req,res) => {
+    let convId = req.params.id;
+    let conversation = await client.conversation.findFirst({
+        where:{
+            id:convId
+        }
+    })
+    code = conversation ? HttpsCode.SUCESS: HttpsCode.RECOURCE_NOT_FOUND
+        return res.status(code).json({
+            conversation:conversation,
+            message:conversation ? "" : "conversation not found"
+    })
+})
+router.post("/conversations/:id/invite", async (req, res) => {
+    const convId = req.params.id;
+
+    try {
+        const users = req.body.users;
+
+        // Find the conversation
+        const conversation = await client.conversation.findFirst({
+            where: {
+                id: convId
+            },
+            include: {
+                invitedUsers: true
+            }
+        });
+
+        if (!conversation) {
+            return res.status(HttpsCode.RECOURCE_NOT_FOUND).json({ message: "Conversation not found" });
+        }
+
+        if (!users || users.length === 0) {
+            return res.status(HttpsCode.BAD_REQUEST).json({ message: "No users to invite" });
+        }
+
+        const invitedUsers = conversation.invitedUsers.map(user => user.id);
+        const userToInvite = [];
+
+        for (const user of users) {
+            if (invitedUsers.includes(user)) {
+                continue; // Skip if the user is already invited
+            }
+
+            if (await UserHelper.areFriends(req.user.id, user)) {
+                userToInvite.push({ id: user });
+
+                // Create an invitation notification
+                await client.notification.create({
+                    data: {
+                        type: "GROUP_INVITATION",
+                        userId: user,
+                        content: `${req.user.username} invited you to a conversation.`,
+                        actorId: req.user.id,
+                        relatedConvId: conversation.id
+                    }
+                });
+            }
+        }
+
+        if (userToInvite.length > 0) {
+            // Add new invited users to the conversation
+            await client.conversation.update({
+                where: { id: conversation.id },
+                data: {
+                    invitedUsers: {
+                        connect: userToInvite
+                    }
+                }
+            });
+        }
+
+        res.status(HttpsCode.SUCESS).json({
+            message: "Users invited successfully",
+            invitedUsers: userToInvite
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(HttpsCode.SERVER_ERROR).json({
+            message: "Server error"
+        });
+    }
+});
+router.post("/conversation/:id/join", [checkAuthenticated], async (req, res) => {
+    const convId = req.params.id;
+    const userId = req.user.id;
+
+    try {
+        // Find the conversation with its invited users
+        const conversation = await client.conversation.findFirst({
+            where: {
+                id: convId
+            },
+            include: {
+                invitedUsers: true, 
+                users: true 
+            }
+        });
+
+        if (!conversation) {
+            return res.status(HttpsCode.RECOURCE_NOT_FOUND).json({ message: "Conversation not found" });
+        }
+
+        const isAlreadyMember = conversation.users.some(user => user.id === userId);
+        if (isAlreadyMember) {
+            return res.status(HttpsCode.BAD_REQUEST).json({ message: "You are already a member of this conversation" });
+        }
+
+        const isInvited = conversation.invitedUsers.some(user => user.id === userId);
+        if (!isInvited) {
+            return res.status(HttpsCode.FORBIDDEN).json({ message: "You are not invited to join this conversation" });
+        }
+
+        // Add the user to the conversation
+        await client.conversation.update({
+            where: { id: convId },
+            data: {
+                users: {
+                    connect: { id: userId }
+                },
+                invitedUsers: {
+                    disconnect: { id: userId } // Remove the user from the invited list after joining
+                }
+            }
+        });
+
+        res.status(HttpsCode.SUCESS).json({ message: "You have successfully joined the conversation" });
+    } catch (error) {
+        console.error(error);
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+});
+router.get("/notifications", [checkAuthenticated], async (req, res) => {
+    const userId = req.user.id;
+    try{
+        let notifications = await client.notification.findMany({
+            where:{
+                userId:userId
+            }
+        })
+        res.status(HttpsCode.SUCESS).json({
+            notifications:notifications
+        })
+    }
+});
+
+
+router.post("/notifications/:id/remove", [checkAuthenticated], async (req, res) => {
+    const notificationId = req.params.id;
+    const userId = req.user.id;
+
+    try {
+        let effected = UserHelper.burnNotification(userId,notificationId);
+        if(!effected){
+            throw new Error("Cannot remove notification")
+        }
+        res.status(HttpsCode.SUCESS).json({ message: "Notification removed successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+});
+
 
 
 

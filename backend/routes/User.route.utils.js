@@ -31,3 +31,35 @@ export async function areFriends(userId, otherUserIds) {
   }
 }
 
+export async function burnNotification(userId, notificationId) {
+  try {
+      // Ensure the notification belongs to the authenticated user
+
+      // Find the notification
+      const notification = await client.notification.findFirst({
+          where: {
+              id: notificationId,
+              userId: userId // Ensure the notification belongs to the user
+          }
+      });
+
+      if (!notification) {
+          return false
+      }
+
+      // Delete the notification
+      await client.notification.delete({
+          where: {
+              id: notificationId
+          }
+      });
+
+      return true
+  } catch (error) {
+      console.error("Error removing notification:", error);
+      return false
+  }
+}
+
+
+
