@@ -61,5 +61,22 @@ export async function burnNotification(userId, notificationId) {
   }
 }
 
+export async function isFollowing(user1, user2) {
+  try {
+      // Query the `follows` table to check if user1 is following user2
+      const follow = await client.follows.findFirst({
+          where: {
+              followerId: user1, // user1 is the follower
+              followingId: user2 // user2 is the one being followed
+          }
+      });
+
+      // Return true if a record exists, false otherwise
+      return follow !== null;
+  } catch (error) {
+      console.error("Error checking follow status:", error);
+      throw new Error("Server error while checking follow status");
+  }
+}
 
 

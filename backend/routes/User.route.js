@@ -71,7 +71,7 @@ router.get("/conversations", [checkAuthenticated], async (req, res) => {
         res.status(200).json({ conversations });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to retrieve conversations" });
+        res.status(500).json({ message: "Failed to retrieve conversations" });
     }
 });
 
@@ -124,7 +124,7 @@ router.post("/conversations/create", [checkAuthenticated], async (req, res) => {
         res.status(201).json({ message: "Conversation created", conversation });
     } catch (error) {
         console.error(error);
-        res.status(HttpsCode.BAD_REQUEST).json({ error: "Failed to create conversation" });
+        res.status(HttpsCode.BAD_REQUEST).json({ message: "Failed to create conversation" });
     }
 });
 router.get("/conversations/:id",[checkAuthenticated],async (req,res) => {
@@ -290,6 +290,109 @@ router.post("/notifications/:id/remove", [checkAuthenticated], async (req, res) 
         res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
     }
 });
+
+router.post("/posts/create",[checkAuthenticated],async (req,res) => {
+    const userId = req.user.id;
+    try{
+        let {content,parent} = req.body
+        if (!content) {
+            return res.status(400).json({ message: "Content is required" });
+        }
+        let post = await client.post.create({
+            data: {
+                content: content,
+                authorId: userId,
+                parentId: parent || null
+            }
+        });
+        return res.status(HttpsCode.CREATED).json({
+            post:post
+        })
+    }catch(e){
+        console.log(e)
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+})
+router.get("/posts/all",[checkAuthenticated],async (req,res) => {
+    const userId = req.user.id;
+    try {
+        const user = await client.user.findFirst({
+            where:{
+                id:userId
+            }
+        })
+        const followings = await user.following()
+        let posts =[]
+        if(followings && followings.length > 0){
+            for (let followingUser of followings) {
+                let userPosts = await client.post.findMany({
+                    where: {
+                        authorId: followingUser.id
+                        }
+                    });
+                posts = posts.concat(userPosts);
+            }
+        }
+        res.status(HttpsCode.SUCESS).json({
+            posts:posts
+        })
+    }
+    catch(e){
+        console.log(e)
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+
+})
+router.get("/posts/from/:id",[checkAuthenticated],async (req,res) => {
+    const userId = req.user.id;
+    const fromUserId = req.params.id
+    try{
+        if(!UserHelper.isFollowing(userId,fromUserId)){
+            return res.status(HttpsCode.FORBIDDEN).json({
+                message:"not authorized to get this post"
+            })
+        }
+        let posts = client.post.findMany({
+            where:{
+                authorId:fromUserId
+            }
+        })
+        return res.status(HttpsCode.SUCESS).json({
+            posts:posts
+        })
+
+    }catch(e){
+        console.log(e)
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+})
+router.get("/posts/:id",[checkAuthenticated],async (req,res) => {
+    const userId = req.user.id;
+    const postId = req.params.id
+    try{
+        let post = client.post.findUnique({
+            where:{
+                id:postId
+            }
+        })
+        if(!post){
+            throw new Error("no post with correspond id")
+        }
+        if(UserHelper.isFollowing(userId,authorId)){
+            return res.status(HttpsCode.SUCESS).json({
+                post:post
+            })
+        }
+        else{
+            return res.status(HttpsCode.FORBIDDEN).json({
+                message:"not authorized to get this post"
+            })
+        }
+    }catch(e){
+        console.log(e)
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+})
 
 
 
