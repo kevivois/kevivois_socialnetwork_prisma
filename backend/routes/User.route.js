@@ -6,8 +6,6 @@ import * as HttpsCode from "../HttpsCode.js"
 import {checkAuthenticated} from "../middleware/auth/checkAuth.js"
 import * as UserHelper from "./User.route.utils.js"
 
-
-
 const router = express.Router()
 
 const client = new PrismaSingleton().client;
@@ -17,6 +15,12 @@ router.get("/me",[checkAuthenticated],async (req,res) => {
     let user = await client.user.findFirst({
         where:{
             id:userId
+        },
+        select: {
+            id: true,
+            username: true,
+            email: true,
+            profile: true // Assuming user has a profile relation
         }
     })
     if(user){
@@ -42,7 +46,8 @@ router.get("/conversations", [checkAuthenticated], async (req, res) => {
                 users: { // Include details of all users in the conversation
                     select: {
                         id: true,
-                        username: true
+                        username: true,
+                        email: true
                     }
                 },
                 messages: { // Optionally include the messages in the conversation
@@ -90,8 +95,23 @@ router.post("/conversations/create", [checkAuthenticated], async (req, res) => {
                 admins: {
                     connect: [{ id: creatorId }] // The creator is also added as an admin
                 }
+            },
+            include: {
+                users: {
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                },
+                admins: {
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                }
             }
         });
+
         if (userIds != null && userIds.length > 0) {
             const invitedUsers = [];
             if(await UserHelper.areFriends(creatorId, userIds)){
@@ -120,18 +140,33 @@ router.post("/conversations/create", [checkAuthenticated], async (req, res) => {
             }
         }
 
-
         res.status(201).json({ message: "Conversation created", conversation });
     } catch (error) {
         console.error(error);
         res.status(HttpsCode.BAD_REQUEST).json({ message: "Failed to create conversation" });
     }
 });
+
 router.get("/conversations/:id",[checkAuthenticated],async (req,res) => {
     let convId = req.params.id;
     let conversation = await client.conversation.findFirst({
         where:{
             id:convId
+        },
+        include: {
+            users: {
+                select: {
+                    id: true,
+                    username: true
+                }
+            },
+            messages: {
+                select: {
+                    id: true,
+                    content: true,
+                    createdAt: true
+                }
+            }
         }
     })
     code = conversation ? HttpsCode.SUCESS: HttpsCode.RECOURCE_NOT_FOUND
@@ -140,6 +175,7 @@ router.get("/conversations/:id",[checkAuthenticated],async (req,res) => {
             message:conversation ? "" : "conversation not found"
     })
 })
+
 router.post("/conversations/:id/invite", async (req, res) => {
     const convId = req.params.id;
 
@@ -211,6 +247,7 @@ router.post("/conversations/:id/invite", async (req, res) => {
         });
     }
 });
+
 router.post("/conversation/:id/join", [checkAuthenticated], async (req, res) => {
     const convId = req.params.id;
     const userId = req.user.id;
@@ -222,8 +259,16 @@ router.post("/conversation/:id/join", [checkAuthenticated], async (req, res) => 
                 id: convId
             },
             include: {
-                invitedUsers: true, 
-                users: true 
+                invitedUsers: {
+                    select: {
+                        id: true
+                    }
+                }, 
+                users: {
+                    select: {
+                        id: true
+                    }
+                }
             }
         });
 
@@ -260,20 +305,30 @@ router.post("/conversation/:id/join", [checkAuthenticated], async (req, res) => 
         res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
     }
 });
+
 router.get("/notifications", [checkAuthenticated], async (req, res) => {
     const userId = req.user.id;
     try{
         let notifications = await client.notification.findMany({
             where:{
                 userId:userId
+            },
+            select: {
+                id: true,
+                type: true,
+                content: true,
+                createdAt: true
             }
         })
         res.status(HttpsCode.SUCESS).json({
             notifications:notifications
         })
     }
+    catch(e){
+        console.log(e)
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
 });
-
 
 router.post("/notifications/:id/remove", [checkAuthenticated], async (req, res) => {
     const notificationId = req.params.id;
@@ -303,6 +358,17 @@ router.post("/posts/create",[checkAuthenticated],async (req,res) => {
                 content: content,
                 authorId: userId,
                 parentId: parent || null
+            },
+            select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                author: {
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                }
             }
         });
         return res.status(HttpsCode.CREATED).json({
@@ -313,26 +379,28 @@ router.post("/posts/create",[checkAuthenticated],async (req,res) => {
         res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
     }
 })
+
 router.get("/posts/all",[checkAuthenticated],async (req,res) => {
     const userId = req.user.id;
     try {
         const user = await client.user.findFirst({
             where:{
                 id:userId
+            },
+            select: {
+                id: true,
+                following:{
+                    id:true
+                }
             }
         })
-        const followings = await user.following()
-        let posts =[]
-        if(followings && followings.length > 0){
-            for (let followingUser of followings) {
-                let userPosts = await client.post.findMany({
-                    where: {
-                        authorId: followingUser.id
-                        }
-                    });
-                posts = posts.concat(userPosts);
-            }
-        }
+        const followings = await user.following;
+        const posts = await client.post.findMany({
+            where: {
+                authorId: { in: followings.map(f => f.id) }
+            },
+            select: { id: true, content: true, createdAt: true }
+        });
         res.status(HttpsCode.SUCESS).json({
             posts:posts
         })
@@ -343,6 +411,7 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
     }
 
 })
+
 router.get("/posts/from/:id",[checkAuthenticated],async (req,res) => {
     const userId = req.user.id;
     const fromUserId = req.params.id
@@ -355,6 +424,11 @@ router.get("/posts/from/:id",[checkAuthenticated],async (req,res) => {
         let posts = client.post.findMany({
             where:{
                 authorId:fromUserId
+            },
+            select: {
+                id: true,
+                content: true,
+                createdAt: true
             }
         })
         return res.status(HttpsCode.SUCESS).json({
@@ -366,6 +440,7 @@ router.get("/posts/from/:id",[checkAuthenticated],async (req,res) => {
         res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
     }
 })
+
 router.get("/posts/:id",[checkAuthenticated],async (req,res) => {
     const userId = req.user.id;
     const postId = req.params.id
@@ -373,12 +448,23 @@ router.get("/posts/:id",[checkAuthenticated],async (req,res) => {
         let post = client.post.findUnique({
             where:{
                 id:postId
+            },
+            select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                author: {
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                }
             }
         })
         if(!post){
             throw new Error("no post with correspond id")
         }
-        if(UserHelper.isFollowing(userId,authorId)){
+        if(UserHelper.isFollowing(userId,post.author.id)){
             return res.status(HttpsCode.SUCESS).json({
                 post:post
             })
@@ -394,8 +480,92 @@ router.get("/posts/:id",[checkAuthenticated],async (req,res) => {
     }
 })
 
+router.get("/follow/:userId",[checkAuthenticated], async (req, res) => {
+    const userId = req.params.userId;
 
+    try {
+        const userToFollow = await client.user.findFirst({
+            where: { id: userId },
+            include: {
+                followers: {
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                }
+            }
+        });
 
+        if (!userToFollow) {
+            return res.status(HttpsCode.RECOURCE_NOT_FOUND).json({ message: "User does not exist" });
+        }
+
+        const isAlreadyFollowing = await client.follows.findFirst({
+            where: {
+                followerId: req.user.id,
+                followingId: userId
+            }
+        });
+
+        if (!isAlreadyFollowing) {
+            await client.follows.create({
+                data: {
+                    followerId: req.user.id,
+                    followingId: userId
+                }
+            });
+        }
+
+        res.status(HttpsCode.SUCESS).json({ message: "Follow action successful" });
+    } catch (e) {
+        console.error(e);
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+});
+router.get("/followers",[checkAuthenticated], async (req, res) => {
+    try{
+        let user = await client.user.findFirst({
+            where:{
+                id:req.user.id
+            },
+            include:{
+                followers:{
+                    select:{
+                        id:true,
+                        username:true
+                    }
+                }
+            }
+        })
+        let followers = user.followers
+        res.status(HttpsCode.SUCESS).json({ followers: followers });
+    }catch (e) {
+        console.error(e);
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+});
+router.get("/following",[checkAuthenticated], async (req, res) => {
+    try{
+        let user = await client.user.findFirst({
+            where:{
+                id:req.user.id
+            },
+            include:{
+                following:{
+                    select:{
+                        id:true,
+                        username:true
+                    }
+                }
+            }
+        })
+        let following = user.following
+        res.status(HttpsCode.SUCESS).json({ following: following });
+    }catch (e) {
+        console.error(e);
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+});
 
 
 export default router;
