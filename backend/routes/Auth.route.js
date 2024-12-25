@@ -30,22 +30,37 @@ router.post('/logout', (req, res) => {
     });
 });
 
-router.get("/isAuth",(req,res) => {
-    if(req.isAuthenticated()){
-        return res.status(HttpsCode.SUCESS).send({
-            "message":"i am authenticated"
-        })
+router.get("/isAuth",async (req,res) => {
+    try{
+        if(req.isAuthenticated()){
+            let user = await client.user.findFirst({
+                where:{
+                    id:req.user.id
+                }
+            })
+            req.user = user
+            return res.status(HttpsCode.SUCESS).send({
+                "message":"i am authenticated",
+                "auth":true,
+                "user":user
+            })
+        }
+    }catch(e){
+        console.log(e)
     }
     return res.status(HttpsCode.UNAUTHORIZED).send({
-        "message":"i am not authenticated"
+        "message":"i am not authenticated",
+        "auth":false,
+        "user":null
     })
+
 })
 
 router.post("/create",async (req,res) => {
     try{
         if(!req.body.username || !req.body.password)
         {   
-            return res.status(HttpsCode.BAD_REQUEST)
+            return res.sendStatus(HttpsCode.BAD_REQUEST)
         }
         let user = await client.user.findFirst({
             where:{

@@ -20,7 +20,9 @@ router.get("/me",[checkAuthenticated],async (req,res) => {
             id: true,
             username: true,
             email: true,
-            profile: true // Assuming user has a profile relation
+            posts:true,
+            followers:true,
+            following:true
         }
     })
     if(user){
@@ -390,7 +392,9 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
             select: {
                 id: true,
                 following:{
-                    id:true
+                    select:{
+                        id:true,
+                    }
                 }
             }
         })
@@ -531,8 +535,7 @@ router.get("/followers",[checkAuthenticated], async (req, res) => {
             include:{
                 followers:{
                     select:{
-                        id:true,
-                        username:true
+                        follower:true
                     }
                 }
             }
@@ -553,8 +556,7 @@ router.get("/following",[checkAuthenticated], async (req, res) => {
             include:{
                 following:{
                     select:{
-                        id:true,
-                        username:true
+                        following:true
                     }
                 }
             }
