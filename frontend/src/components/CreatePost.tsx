@@ -8,7 +8,7 @@ const CreatePost = ({ onPostCreated }: { onPostCreated: () => void }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('/posts/create', { content, image });
+      await axios.post('/user/posts/create', { content, image });
       setContent('');
       setImage('');
       onPostCreated();

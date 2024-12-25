@@ -22,6 +22,7 @@ model User {
   posts            Post[]         @relation("UserPostRelation")
   following        follows[]      @relation("followerUserRelation")
   followers        follows[]      @relation("followingUserRelation")
+  likedPosts       Post[] @relation("UserLikePostRelation")
 }
 
 model follows {
@@ -45,6 +46,7 @@ model Post {
   parent    Post?     @relation("ParentPostRelation", fields: [parentId], references: [id])
   childrens Post[]    @relation("ParentPostRelation")
   author      User      @relation("UserPostRelation", fields: [authorId], references: [id])
+  likes     User[] @relation("UserLikePostRelation")
 }
 
 model Conversation {

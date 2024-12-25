@@ -5,11 +5,21 @@ import CreatePost from '../components/CreatePost';
 
 
 const Feed = () => {
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<Array<any>>([]);
 
   useEffect(() => {
     fetchPosts();
   }, []);
+  
+  const likeAPost = async (postId:any)=>{
+    const response = await axios.get("/user/posts/"+postId+"/like");
+    if(response.data.post){
+      let newPosts:Array<any> = [...posts]
+      let idx = newPosts.findIndex((p:any) => p.id == postId);
+      newPosts[idx] = response.data.post
+      setPosts(newPosts)
+    }
+  }
 
   const fetchPosts = async () => {
     try {
@@ -20,6 +30,7 @@ const Feed = () => {
       console.error('Error fetching posts:', error);
     }
   };
+
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -38,8 +49,8 @@ const Feed = () => {
             <p className="text-gray-800 mb-4">{post.content}</p>
             <div className="flex items-center space-x-4 text-gray-500">
               <button className="flex items-center space-x-2 hover:text-blue-500">
-                <Heart className="w-5 h-5" />
-                <span>{post.likes}</span>
+                <Heart className="w-5 h-5"onClick={() => likeAPost(post.id)} />
+                <span>{post.likes?.length}</span>
               </button>
               <button className="flex items-center space-x-2 hover:text-blue-500">
                 <MessageSquare className="w-5 h-5" />

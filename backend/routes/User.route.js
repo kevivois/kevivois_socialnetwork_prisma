@@ -395,16 +395,38 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
                     select:{
                         id:true,
                     }
+                },
+                posts:{
+                    select:{
+                         id: true, content: true, createdAt: true,author:{
+                            select:{
+                                username:true,
+                                id:true
+                            }
+                        },
+                        likes:{
+                            select:{
+                                id:true,
+                                username:true
+                            }
+                        }
+                    }
                 }
             }
         })
         const followings = await user.following;
-        const posts = await client.post.findMany({
+        let posts = await client.post.findMany({
             where: {
                 authorId: { in: followings.map(f => f.id) }
             },
-            select: { id: true, content: true, createdAt: true }
+            select: { id: true, content: true, createdAt: true,author:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            } }
         });
+        posts = posts.concat(user.posts)
         res.status(HttpsCode.SUCESS).json({
             posts:posts
         })
@@ -483,6 +505,90 @@ router.get("/posts/:id",[checkAuthenticated],async (req,res) => {
         res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
     }
 })
+router.get("/posts/:id/like",[checkAuthenticated],async (req,res) => {
+    const userId = req.user.id;
+    const postId = req.params.id
+    try{
+        let post = await client.post.findUnique({
+            where: {
+                id: postId
+            },
+            select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                likes: { 
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                },
+                author: {
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                }
+            }
+        });
+        if(!post){
+            throw new Error("no post with correspond id")
+        }
+        if (post.likes.find(a => a.id == userId)!= null) {
+            await client.post.update({
+                where: {
+                  id: postId,
+                },
+                data: {
+                  likes: {
+                    disconnect:[{id:userId}]
+                  },
+                },
+            });
+        }
+        else{
+        await client.post.update({
+            where: {
+              id: postId,
+            },
+            data: {
+              likes: {
+                connect:[{id:userId}]
+              },
+            },
+        });
+        }
+        post = await client.post.findUnique({
+            where: {
+                id: postId
+            },
+            select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                likes: { 
+                    select: {
+                        id: true,
+                        username:true
+                    }
+                },
+                author: {
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                }
+            }
+        });
+        
+
+          return res.status(HttpsCode.SUCESS).json({ message: "",post:post });
+    }catch(e){
+        console.log(e)
+        res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });
+    }
+})
+
 
 router.get("/follow/:userId",[checkAuthenticated], async (req, res) => {
     const userId = req.params.userId;
