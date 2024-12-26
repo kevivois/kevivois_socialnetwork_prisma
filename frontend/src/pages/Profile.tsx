@@ -12,53 +12,25 @@ const Profile = () => {
 
   useEffect(() => {
     fetchUserData();
-    fetchUserPosts();
-    fetchFollowers();
-    fetchFollowing();
   }, [userId]);
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get('/user/me');
+      const response = await axios.get('/user/'+userId);
       setUser(response.data.user);
+      setPosts(response.data.user.posts)
+      setFollowers(response.data.user.followers)
+      setFollowing(response.data.user.following)
       console.log(response.data)
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
   };
 
-  const fetchUserPosts = async () => {
-    try {
-      const response = await axios.get(`/user/posts/from/${userId}`);
-      console.log(response.data)
-      setPosts(response.data.posts);
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-    }
-  };
-
-  const fetchFollowers = async () => {
-    try {
-      const response = await axios.get('/user/followers');
-      setFollowers(response.data.followers);
-    } catch (error) {
-      console.error('Error fetching followers:', error);
-    }
-  };
-
-  const fetchFollowing = async () => {
-    try {
-      const response = await axios.get('/user/following');
-      setFollowing(response.data.following);
-    } catch (error) {
-      console.error('Error fetching following:', error);
-    }
-  };
 
   const handleFollow = async () => {
     try {
       await axios.get(`/follow/${userId}`);
-      fetchFollowers();
     } catch (error) {
       console.error('Error following user:', error);
     }

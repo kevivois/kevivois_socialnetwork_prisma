@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from '../axios.call'
 import { MessageSquare, Heart, Share2 } from 'lucide-react';
 import CreatePost from '../components/CreatePost';
+import { Link } from 'react-router-dom';
 
 
 const Feed = () => {
@@ -41,7 +42,8 @@ const Feed = () => {
           <div key={post.id} className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center mb-4">
               <div className="ml-3">
-                <h3 className="font-semibold text-gray-900">{post.author.username}</h3>
+                <Link to={`/profile/${post.author.id}`}><h3 className="font-semibold text-gray-900">{post.author.username}</h3>
+                </Link>
                 <p className="text-sm text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</p>
               </div>
             </div>

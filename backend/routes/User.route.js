@@ -34,6 +34,30 @@ router.get("/me",[checkAuthenticated],async (req,res) => {
     }
 })
 
+router.get("/:userId",[checkAuthenticated],async (req,res) => {
+    let userId = req.params.userId;
+    let user = await client.user.findFirst({
+        where:{
+            id:userId
+        },
+        select: {
+            id: true,
+            username: true,
+            email: true,
+            posts:true,
+            followers:true,
+            following:true
+        }
+    })
+    if(user){
+        return res.status(HttpsCode.SUCESS).json({
+            user:user
+        })
+    }else{
+        return res.sendStatus(HttpsCode.RECOURCE_NOT_FOUND);
+    }
+})
+
 router.get("/conversations", [checkAuthenticated], async (req, res) => {
     try {
         let userId = req.user.id;
