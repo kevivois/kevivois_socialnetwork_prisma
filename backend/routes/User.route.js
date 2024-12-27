@@ -45,10 +45,39 @@ router.get("/:userId",[checkAuthenticated],async (req,res) => {
             username: true,
             email: true,
             posts:true,
-            followers:true,
-            following:true
+            followers:{
+                select:{
+                    follower:{
+                        select:{
+                            id:true,
+                            username:true
+                        }
+                    }
+                }
+            },
+            following:{
+                select:{
+                    following:{
+                        select:{
+                            id:true,
+                            username:true
+                        }
+                    }
+                }
+            }
         }
     })
+
+    let followers = []
+    for(let f of user.followers){
+        followers.push({id:f.follower.id,username:f.follower.username})
+    }
+    let following = []
+    for(let f of user.following){
+        following.push({id:f.following.id,username:f.following.username})
+    }
+    user.followers = followers;
+    user.following = following
     if(user){
         return res.status(HttpsCode.SUCESS).json({
             user:user
@@ -56,6 +85,36 @@ router.get("/:userId",[checkAuthenticated],async (req,res) => {
     }else{
         return res.sendStatus(HttpsCode.RECOURCE_NOT_FOUND);
     }
+})
+
+router.get("/me/id",[checkAuthenticated],async(req,res) => {
+    return res.status(HttpsCode.ACCEPTED).json({
+        id:req.user.id
+    })
+})
+
+router.get("/search/:username",[checkAuthenticated],async(req,res) => {
+    let username = req.params.username
+
+    try{
+
+        let users = await client.user.findMany({
+            where:{
+                username:{
+                    contains:username
+                }
+            },
+            take:10
+        })
+        return res.status(HttpsCode.SUCESS).json({
+            users:users
+        })
+    }catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Failed to retrieve users" });
+    }
+
+
 })
 
 router.get("/conversations", [checkAuthenticated], async (req, res) => {
@@ -415,11 +474,6 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
             },
             select: {
                 id: true,
-                following:{
-                    select:{
-                        id:true,
-                    }
-                },
                 posts:{
                     select:{
                          id: true, content: true, createdAt: true,author:{
@@ -438,10 +492,22 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
                 }
             }
         })
-        const followings = await user.following;
+        let followings = []
+        let follows = await client.follows.findMany({
+            where:{
+                followerId:userId
+            },
+            select:{
+                following:true
+            }
+        })
+        for(let f of follows){
+            followings.push(f.following.id)
+        }
+
         let posts = await client.post.findMany({
             where: {
-                authorId: { in: followings.map(f => f.id) }
+                authorId: { in: followings }
             },
             select: { id: true, content: true, createdAt: true,author:{
                 select:{
@@ -619,15 +685,7 @@ router.get("/follow/:userId",[checkAuthenticated], async (req, res) => {
 
     try {
         const userToFollow = await client.user.findFirst({
-            where: { id: userId },
-            include: {
-                followers: {
-                    select: {
-                        id: true,
-                        username: true
-                    }
-                }
-            }
+            where: { id: userId }
         });
 
         if (!userToFollow) {
@@ -640,7 +698,6 @@ router.get("/follow/:userId",[checkAuthenticated], async (req, res) => {
                 followingId: userId
             }
         });
-
         if (!isAlreadyFollowing) {
             await client.follows.create({
                 data: {

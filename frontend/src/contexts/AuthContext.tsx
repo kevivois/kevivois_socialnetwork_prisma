@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from '../axios.call'
 interface AuthContextType {
   user: any;
+  userId:String;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
@@ -20,6 +21,7 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userId,setUserId] = useState("")
 
   useEffect(() => {
     checkAuth();
@@ -30,13 +32,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await axios.get('/auth/isAuth');
       if (response.data) {
         if(response.data.auth == true){
-          setUser(response.data.user);
+          setUser(response.data.user ? response.data.user : user);
+          setUserId(response.data.user ? response.data.user.id : "")
           setIsAuthenticated(true);
           return
         }
         throw new Error("not authenticated")
       }
     } catch (error) {
+      console.log(error)
       setUser(null);
       setIsAuthenticated(false);
     }
@@ -55,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user,userId, login, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );

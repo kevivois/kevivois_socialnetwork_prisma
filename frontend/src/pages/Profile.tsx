@@ -6,6 +6,7 @@ import { UserPlus, Users } from 'lucide-react';
 const Profile = () => {
   const { userId } = useParams();
   const [user, setUser] = useState<any>(null);
+  const [currentUserId,setCurrentUserId] = useState<String>("")
   const [posts, setPosts] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
@@ -16,12 +17,14 @@ const Profile = () => {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get('/user/'+userId);
+      let response = await axios.get('/user/'+userId);
       setUser(response.data.user);
       setPosts(response.data.user.posts)
       setFollowers(response.data.user.followers)
       setFollowing(response.data.user.following)
-      console.log(response.data)
+      console.log(response.data.user)
+      response = await axios.get("/user/me/id")
+      setCurrentUserId(response.data.id ? response.data.id : "")
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
@@ -30,7 +33,7 @@ const Profile = () => {
 
   const handleFollow = async () => {
     try {
-      await axios.get(`/follow/${userId}`);
+      await axios.get(`/user/follow/${userId}`);
     } catch (error) {
       console.error('Error following user:', error);
     }
@@ -59,7 +62,7 @@ const Profile = () => {
               </div>
             </div>
             
-            {userId !== user.id && (
+            {currentUserId !== user.id && (
               <button
                 onClick={handleFollow}
                 className="mt-4 flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
