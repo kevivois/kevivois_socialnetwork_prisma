@@ -67,17 +67,9 @@ router.get("/:userId",[checkAuthenticated],async (req,res) => {
             }
         }
     })
-
-    let followers = []
-    for(let f of user.followers){
-        followers.push({id:f.follower.id,username:f.follower.username})
-    }
-    let following = []
-    for(let f of user.following){
-        following.push({id:f.following.id,username:f.following.username})
-    }
-    user.followers = followers;
+    let {following,followers} = UserHelper.prepareUser(user)
     user.following = following
+    user.followers = followers
     if(user){
         return res.status(HttpsCode.SUCESS).json({
             user:user
@@ -514,7 +506,14 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
                     id:true,
                     username:true
                 }
-            } }
+            },
+            likes:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            }
+        }
         });
         posts = posts.concat(user.posts)
         res.status(HttpsCode.SUCESS).json({
@@ -705,9 +704,39 @@ router.get("/follow/:userId",[checkAuthenticated], async (req, res) => {
                     followingId: userId
                 }
             });
+        }else{
+            await client.follows.deleteMany({
+                where:{
+                    followerId:req.user.id,
+                    followingId:userId
+                }
+            })
         }
-
-        res.status(HttpsCode.SUCESS).json({ message: "Follow action successful" });
+        let user = await client.user.findFirst({
+            where:{
+                id:userId
+            },
+            select:{
+                id:true,
+                username:true,
+                followers:{
+                    select:{
+                        follower:true
+                    }
+                },
+                following:{
+                    select:{
+                        following:true
+                    }
+                }
+            }
+        })
+        let {following,followers} = UserHelper.prepareUser(user)
+        user.following = following
+        user.followers = followers
+        return res.status(HttpsCode.ACCEPTED).json({
+            user:user
+        })
     } catch (e) {
         console.error(e);
         res.status(HttpsCode.SERVER_ERROR).json({ message: "Server error" });

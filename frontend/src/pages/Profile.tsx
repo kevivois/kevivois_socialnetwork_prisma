@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from '../axios.call';
+import { useAuth } from '../contexts/AuthContext';
 import { UserPlus, Users } from 'lucide-react';
 
 const Profile = () => {
+  let currentUser = useAuth().user;
   const { userId } = useParams();
   const [user, setUser] = useState<any>(null);
-  const [currentUserId,setCurrentUserId] = useState<String>("")
   const [posts, setPosts] = useState([]);
   const [followers, setFollowers] = useState([]);
-  const [following, setFollowing] = useState([]);
+  const [following, setFollowing] = useState([]); 
 
   useEffect(() => {
     fetchUserData();
@@ -22,9 +23,6 @@ const Profile = () => {
       setPosts(response.data.user.posts)
       setFollowers(response.data.user.followers)
       setFollowing(response.data.user.following)
-      console.log(response.data.user)
-      response = await axios.get("/user/me/id")
-      setCurrentUserId(response.data.id ? response.data.id : "")
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
@@ -33,7 +31,16 @@ const Profile = () => {
 
   const handleFollow = async () => {
     try {
-      await axios.get(`/user/follow/${userId}`);
+      let response = await axios.get(`/user/follow/${userId}`);
+      if(!response.data.user){
+        throw new Error("server error")
+      }else{
+        console.log(response.data.user)
+        setUser(response.data.user)
+        setFollowers(response.data.user.followers)
+        setFollowing(response.data.user.following)
+      }
+      
     } catch (error) {
       console.error('Error following user:', error);
     }
@@ -46,8 +53,8 @@ const Profile = () => {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center">
           <div className="ml-6">
-            <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
-            <p className="text-gray-600">{user.username}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{user.username}</h1>
+            <p className="text-gray-600">{user.id}</p>
             
             <div className="flex items-center mt-4 space-x-4">
               <div className="flex items-center">
@@ -62,13 +69,13 @@ const Profile = () => {
               </div>
             </div>
             
-            {currentUserId !== user.id && (
+            {currentUser.id !== user.id && (
               <button
                 onClick={handleFollow}
                 className="mt-4 flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
-                Follow
+                {user.followers != null ? user.followers.find((f:any) => f.id == currentUser.id) != null ? "Unfollow" : "Follow" : ""}
               </button>
             )}
           </div>

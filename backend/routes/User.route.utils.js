@@ -79,4 +79,16 @@ export async function isFollowing(user1, user2) {
   }
 }
 
+export function prepareUser(user){
+  let followers = []
+    for(let f of user.followers){
+        followers.push({id:f.follower.id,username:f.follower.username})
+    }
+    let following = []
+    for(let f of user.following){
+        following.push({id:f.following.id,username:f.following.username})
+    }
+    return {following,followers}
+}
+
 

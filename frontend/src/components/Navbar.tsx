@@ -5,7 +5,7 @@ import { useState } from 'react';
 import SearchPopup from './SearchPopup';
 
 const Navbar = () => {
-  const { user,userId, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   if (!isAuthenticated) return null;
@@ -27,7 +27,7 @@ const Navbar = () => {
             <Link to="/" className="text-gray-600 hover:text-gray-900">
               <Home className="w-6 h-6" />
             </Link>
-            <Link to={`/profile/${userId}`} className="text-gray-600 hover:text-gray-900">
+            <Link to={`/profile/${user?.id}`} className="text-gray-600 hover:text-gray-900">
               <User className="w-6 h-6" />
             </Link>
             <button className="text-gray-600 hover:text-gray-900">

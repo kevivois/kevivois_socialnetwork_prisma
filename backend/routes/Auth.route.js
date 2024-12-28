@@ -38,7 +38,6 @@ router.get("/isAuth",async (req,res) => {
                     id:req.user.id
                 }
             })
-            req.user = user
             return res.status(HttpsCode.SUCESS).send({
                 "message":"i am authenticated",
                 "auth":true,
