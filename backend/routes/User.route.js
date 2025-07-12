@@ -22,7 +22,23 @@ router.get("/me",[checkAuthenticated],async (req,res) => {
             email: true,
             posts:true,
             followers:true,
-            following:true
+            following:true,
+            conversations:{
+                select:{
+                    id:true,
+                    messages:true,
+                    title:true,
+                    users:true,
+                    admins:true,
+                    invitedUsers:true,
+                    description:true
+                }
+            },
+            likedPosts:{
+                select:{
+                    id:true
+                }
+            }
         }
     })
     if(user){
@@ -445,7 +461,9 @@ router.post("/posts/create",[checkAuthenticated],async (req,res) => {
                         id: true,
                         username: true
                     }
-                }
+                },
+                parent:true,
+                parentId:true
             }
         });
         return res.status(HttpsCode.CREATED).json({
@@ -499,7 +517,8 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
 
         let posts = await client.post.findMany({
             where: {
-                authorId: { in: followings }
+                authorId: { in: followings },
+                parentId:null
             },
             select: { id: true, content: true, createdAt: true,author:{
                 select:{
@@ -512,7 +531,25 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
                     id:true,
                     username:true
                 }
+            },
+            childrens:{
+                select:{
+                    id: true, content: true, createdAt: true,author:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            },
+            likes:{
+                select:{
+                    id:true,
+                    username:true
+                }
             }
+                }
+            },
+            parent:true,
+            parentId:true
         }
         });
         posts = posts.concat(user.posts)

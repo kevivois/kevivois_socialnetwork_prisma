@@ -31,13 +31,38 @@ router.post('/logout', (req, res) => {
 });
 
 router.get("/isAuth",async (req,res) => {
+    
     try{
         if(req.isAuthenticated()){
             let user = await client.user.findFirst({
-                where:{
-                    id:req.user.id
+        where:{
+            id:req.user.id
+        },
+        select: {
+            id: true,
+            username: true,
+            email: true,
+            posts:true,
+            followers:true,
+            following:true,
+            conversations:{
+                select:{
+                    id:true,
+                    messages:true,
+                    title:true,
+                    users:true,
+                    admins:true,
+                    invitedUsers:true,
+                    description:true
                 }
-            })
+            },
+            likedPosts:{
+                select:{
+                    id:true
+                }
+            }
+        }
+    })
             return res.status(HttpsCode.SUCESS).send({
                 "message":"i am authenticated",
                 "auth":true,

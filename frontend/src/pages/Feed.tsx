@@ -1,71 +1,114 @@
 import { useState, useEffect } from 'react';
-import axios from '../axios.call'
+import axios from '../axios.call';
 import { MessageSquare, Heart, Share2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import CreatePost from '../components/CreatePost';
 import { Link } from 'react-router-dom';
 
 
 const Feed = () => {
-  const [posts, setPosts] = useState<Array<any>>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [commentPostId, setCommentPostId] = useState<string>("");
+
+  const { user,reFetch } = useAuth();
 
   useEffect(() => {
     fetchPosts();
   }, []);
-  
-  const likeAPost = async (postId:any)=>{
-    const response = await axios.get("/user/posts/"+postId+"/like");
-    if(response.data.post){
-      let newPosts:Array<any> = [...posts]
-      let idx = newPosts.findIndex((p:any) => p.id == postId);
-      newPosts[idx] = response.data.post
-      setPosts(newPosts)
-    }
-  }
 
   const fetchPosts = async () => {
     try {
       const response = await axios.get('/user/posts/all');
-      console.log(response.data.posts)
       setPosts(response.data.posts);
     } catch (error) {
       console.error('Error fetching posts:', error);
     }
   };
 
+  const likeAPost = async (postId: string) => {
+    try {
+      const response = await axios.get(`/user/posts/${postId}/like`);
+      const updatedPost = response.data.post;
+      if (updatedPost) {
+        setPosts((prev) =>
+          prev.map((p) => (p.id === postId ? updatedPost : p))
+        );
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+    finally {
+      await reFetch();
+    }
+  };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <CreatePost onPostCreated={fetchPosts} />
-      
+    <div className="max-w-2xl mx-auto px-4">
+      <CreatePost onPostCreated={fetchPosts} parent={null} />
+
       <div className="space-y-6 mt-8">
-        {posts != null && posts.length > 0 && posts.map((post: any) => (
-          <div key={post.id} className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center mb-4">
-              <div className="ml-3">
-                <Link to={`/profile/${post.author.id}`}><h3 className="font-semibold text-gray-900">{post.author.username}</h3>
+        {posts.map((post) => (
+          <div
+            key={post.id}
+            className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 border border-gray-100"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div>
+                <Link to={`/profile/${post.author.id}`}>
+                  <h3 className="font-semibold text-gray-800 hover:underline">{post.author.username}</h3>
                 </Link>
-                <p className="text-sm text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</p>
+                <p className="text-xs text-gray-400">
+                  {new Date(post.createdAt).toLocaleDateString()}
+                </p>
               </div>
             </div>
-            
-            <p className="text-gray-800 mb-4">{post.content}</p>
-            <div className="flex items-center space-x-4 text-gray-500">
-              <button className="flex items-center space-x-2 hover:text-blue-500">
-                <Heart className="w-5 h-5"onClick={() => likeAPost(post.id)} />
-                <span>{post.likes?.length}</span>
+
+            <p className="text-gray-700 text-sm mb-4 whitespace-pre-wrap">{post.content}</p>
+
+            <div className="flex items-center space-x-4 text-gray-500 text-sm">
+              <button
+                className="flex items-center gap-1 hover:text-red-500"
+                onClick={() => likeAPost(post.id)}
+              >
+                <Heart className="w-4 h-4"  color={Array.isArray(user.likedPosts) && user.likedPosts.find((p:any) => p.id === post.id) ? 'pink' : '' } fill={Array.isArray(user.likedPosts) && user.likedPosts.find((p:any) => p.id === post.id) ? 'pink' : '' } />
+                <span>{post.likes?.length || 0}</span>
               </button>
-              <button className="flex items-center space-x-2 hover:text-blue-500">
-                <MessageSquare className="w-5 h-5" />
-                <span>{post.childrens}</span>
+              <button
+                className="flex items-center gap-1 hover:text-blue-500"
+                onClick={() =>
+                  setCommentPostId((prev) => (prev === post.id ? "" : post.id))
+                }
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>{post.childrens?.length || 0}</span>
               </button>
-              <button className="flex items-center space-x-2 hover:text-blue-500">
-                <Share2 className="w-5 h-5" />
+              <button className="flex items-center gap-1 hover:text-green-500">
+                <Share2 className="w-4 h-4" />
               </button>
             </div>
+
+            {commentPostId === post.id && (
+              <div className="mt-4 space-y-4">
+                <CreatePost onPostCreated={fetchPosts} parent={post.id} />
+                {post.childrens?.map((child:any) => (
+                  <div
+                    key={child.id}
+                    className="ml-4 px-4 py-2 border-l-4 border-blue-200 bg-blue-50 rounded"
+                  >
+                    <p className="text-sm text-gray-700">{child.content}</p>
+                    <p className="text-xs text-gray-400">
+                      — {child.author.username},{" "}
+                      {new Date(child.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
     </div>
   );
 };
+
 export default Feed;

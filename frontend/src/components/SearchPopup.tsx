@@ -20,7 +20,6 @@ const SearchPopup = ({ isOpen, onClose }: SearchPopupProps) => {
       if (debouncedQuery.trim()) {
         try {
           const response = await axios.get(`/user/search/${debouncedQuery}`);
-          console.log(response.data)
           setUsers(response.data.users ? response.data.users : []);
         } catch (error) {
           console.error('Error searching users:', error);
@@ -63,10 +62,10 @@ const SearchPopup = ({ isOpen, onClose }: SearchPopupProps) => {
             >
               <img
                 src={user.avatar || `https://ui-avatars.com/api/?name=${user.username}`}
-                alt={user.name}
+                alt={user.username}
                 className="w-10 h-10 rounded-full"
               />
-              <span className="ml-3 font-medium text-gray-900">{user.name}</span>
+              <span className="ml-3 font-medium text-gray-900">{user.username}</span>
             </Link>
           ))}
           {query && users.length === 0 && (

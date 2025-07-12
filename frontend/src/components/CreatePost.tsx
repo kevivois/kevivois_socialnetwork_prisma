@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Image, Send } from 'lucide-react';
 import axios from '../axios.call'
-const CreatePost = ({ onPostCreated }: { onPostCreated: () => void }) => {
+const CreatePost = ({ onPostCreated,parent }: { onPostCreated: () => void,parent:String|null }) => {
   const [content, setContent] = useState('');
   const [image, setImage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axios.post('/user/posts/create', { content, image });
+      await axios.post('/user/posts/create', { content, image,parent });
       setContent('');
       setImage('');
       onPostCreated();

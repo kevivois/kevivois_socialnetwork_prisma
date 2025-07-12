@@ -2,7 +2,6 @@ import { Strategy as LocalStrategy } from 'passport-local';
 import bcrypt from 'bcrypt';
 import PrismaSingleton  from './Connection.js'; // Adjust the path to your file if needed
 
-
 const client = new PrismaSingleton().client;
 
 function initialize(passport) {
@@ -26,15 +25,23 @@ function initialize(passport) {
     }
   };
 
+  
+
   passport.use(new LocalStrategy({ usernameField: 'username' }, authenticateUser));
-  passport.serializeUser((user, done) => done(null, user.id));
-  passport.deserializeUser(async (id, done) => {
+  passport.serializeUser((user, done) => {
+    return done(null,user.id)
+  });
+  passport.deserializeUser(async (id,done) => {
+    try {
     const user = await client.user.findFirst({
       where:{
         id:id
       }
     })
     done(null, user);
+  } catch(err){
+    done(err)
+  }
   });
 }
 

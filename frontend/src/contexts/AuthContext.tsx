@@ -5,6 +5,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
+  isLoading:boolean;
+  reFetch: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -20,10 +22,15 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  const reFetch = async () => {
+    await checkAuth();
+  }
 
   const checkAuth = async () => {
     try {
@@ -41,12 +48,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setIsAuthenticated(false);
     }
+    finally {
+      setIsLoading(false)
+    }
   };
 
   const login = async (username: string, password: string) => {
     const response = await axios.post('/auth/login', { username, password });
-    setUser(response.data.user);
-    setIsAuthenticated(true);
+    await checkAuth();
   };
 
   const logout = async () => {
@@ -56,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated,isLoading ,reFetch}}>
       {children}
     </AuthContext.Provider>
   );

@@ -35,10 +35,11 @@ const KEY = '768069b2596807f59c5600ff61acd8ade6ce1b9b0f5c6c391e82d5f95cd822cc'
 app.use(session({
   secret: KEY, // Replace with a secure key
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: {
     httpOnly: true,
     secure: false, // True uniquement en HTTPS
+    maxAge: 1000 * 60 * 60 * 24,
     sameSite: 'lax', // Autorise les requêtes inter-origines
   },
 }));
@@ -55,14 +56,20 @@ cookie: {
 
 */
 app.use(flash());
+
 initializePassport(passport);
 
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
+
+
+
 app.use("/auth",authRoute);
 app.use("/user",userRoute);
+
+
 
 
 
