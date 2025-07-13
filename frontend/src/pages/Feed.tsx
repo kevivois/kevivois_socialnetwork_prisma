@@ -87,9 +87,9 @@ const Feed = () => {
               </button>
             </div>
 
-            {commentPostId === post.id && (
+            {commentPostId === post.id ? (
               <div className="mt-4 space-y-4">
-                <CreatePost onPostCreated={fetchPosts} parent={post.id} />
+                <CreatePost onPostCreated={fetchPosts} parent={commentPostId} />
                 {post.childrens?.map((child:any) => (
                   <div
                     key={child.id}
@@ -103,7 +103,7 @@ const Feed = () => {
                   </div>
                 ))}
               </div>
-            )}
+            ) : null}
           </div>
         ))}
       </div>

@@ -517,8 +517,8 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
 
         let posts = await client.post.findMany({
             where: {
-                authorId: { in: followings },
-                parentId:null
+                authorId: { in: followings.concat(user.id) },
+                parentId:{equals:null}
             },
             select: { id: true, content: true, createdAt: true,author:{
                 select:{
@@ -548,11 +548,11 @@ router.get("/posts/all",[checkAuthenticated],async (req,res) => {
             }
                 }
             },
-            parent:true,
-            parentId:true
+            parent:{
+                select:{id:true}
+            },
         }
         });
-        posts = posts.concat(user.posts)
         res.status(HttpsCode.SUCESS).json({
             posts:posts
         })
@@ -688,23 +688,37 @@ router.get("/posts/:id/like",[checkAuthenticated],async (req,res) => {
             where: {
                 id: postId
             },
-            select: {
-                id: true,
-                content: true,
-                createdAt: true,
-                likes: { 
-                    select: {
-                        id: true,
-                        username:true
-                    }
-                },
-                author: {
-                    select: {
-                        id: true,
-                        username: true
-                    }
+            select: { id: true, content: true, createdAt: true,author:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            },
+            likes:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            },
+            childrens:{
+                select:{
+                    id: true, content: true, createdAt: true,author:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            },
+            likes:{
+                select:{
+                    id:true,
+                    username:true
                 }
             }
+                }
+            },
+            parent:true,
+            parentId:true
+        }
         });
         
 
