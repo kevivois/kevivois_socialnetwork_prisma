@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route,Navigate  } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
@@ -15,9 +15,10 @@ function App() {
           <Navbar />
           <div className="container mx-auto px-4 py-8">
             <Routes>
+              <Route path="/" element={<Navigate to="/feed" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/" element={
+              <Route path="/feed" element={
                 <PrivateRoute>
                   <Feed />
                 </PrivateRoute>

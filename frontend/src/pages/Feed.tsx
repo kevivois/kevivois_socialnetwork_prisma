@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from '../axios.call';
-import { MessageSquare, Heart, Share2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MessageSquare, Heart, Share2,ChevronsDownUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import CreatePost from '../components/CreatePost';
 import { Link } from 'react-router-dom';
@@ -11,6 +12,8 @@ const Feed = () => {
   const [commentPostId, setCommentPostId] = useState<string>("");
 
   const { user,reFetch } = useAuth();
+
+  const naviguate = useNavigate();
 
   useEffect(() => {
     fetchPosts();
@@ -50,10 +53,12 @@ const Feed = () => {
         {posts.map((post) => (
           <div
             key={post.id}
-            className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 border border-gray-100"
+            className="bg-white rounded-xl shadow hover:shadow-lg hover:cursor-pointer transition p-6 border border-gray-100"
+            onClick={() => naviguate("/post/"+post.id)}
+            
           >
             <div className="flex items-center gap-3 mb-4">
-              <div>
+              <div onClick={(e) => e.stopPropagation()}>
                 <Link to={`/profile/${post.author.id}`}>
                   <h3 className="font-semibold text-gray-800 hover:underline">{post.author.username}</h3>
                 </Link>
@@ -68,22 +73,29 @@ const Feed = () => {
             <div className="flex items-center space-x-4 text-gray-500 text-sm">
               <button
                 className="flex items-center gap-1 hover:text-red-500"
-                onClick={() => likeAPost(post.id)}
+                onClick={(e) => {
+                  likeAPost(post.id)
+                  e.stopPropagation();
+                }}
               >
                 <Heart className="w-4 h-4"  color={Array.isArray(user.likedPosts) && user.likedPosts.find((p:any) => p.id === post.id) ? 'pink' : '' } fill={Array.isArray(user.likedPosts) && user.likedPosts.find((p:any) => p.id === post.id) ? 'pink' : '' } />
                 <span>{post.likes?.length || 0}</span>
               </button>
               <button
                 className="flex items-center gap-1 hover:text-blue-500"
-                onClick={() =>
+                onClick={(e) => {
+                  e.stopPropagation()
                   setCommentPostId((prev) => (prev === post.id ? "" : post.id))
+                  }
                 }
               >
                 <MessageSquare className="w-4 h-4" />
                 <span>{post.childrens?.length || 0}</span>
               </button>
               <button className="flex items-center gap-1 hover:text-green-500">
-                <Share2 className="w-4 h-4" />
+                <Share2 className="w-4 h-4" onClick={(e) => {
+                  e.stopPropagation();
+                }} />
               </button>
             </div>
 
