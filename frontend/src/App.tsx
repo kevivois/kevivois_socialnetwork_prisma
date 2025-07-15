@@ -6,6 +6,7 @@ import Feed from './pages/Feed';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import Post from "./pages/Post"
 
 function App() {
   return (
@@ -26,6 +27,11 @@ function App() {
               <Route path="/profile/:userId" element={
                 <PrivateRoute>
                   <Profile />
+                </PrivateRoute>
+              } />
+              <Route path="/post/:id" element={
+                <PrivateRoute>
+                  <Post />
                 </PrivateRoute>
               } />
             </Routes>

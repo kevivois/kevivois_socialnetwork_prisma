@@ -18,7 +18,7 @@ const CreatePost = ({ onPostCreated,parent }: { onPostCreated: () => void,parent
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6">
+    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-6" >
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}

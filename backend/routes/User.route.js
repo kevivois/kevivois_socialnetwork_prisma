@@ -597,21 +597,42 @@ router.get("/posts/:id",[checkAuthenticated],async (req,res) => {
     const userId = req.user.id;
     const postId = req.params.id
     try{
-        let post = client.post.findUnique({
+        let post = await client.post.findUnique({
             where:{
                 id:postId
             },
-            select: {
-                id: true,
-                content: true,
-                createdAt: true,
-                author: {
-                    select: {
-                        id: true,
-                        username: true
-                    }
+            select: { id: true, content: true, createdAt: true,author:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            },
+            likes:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            },
+            childrens:{
+                select:{
+                    id: true, content: true, createdAt: true,author:{
+                select:{
+                    id:true,
+                    username:true
+                }
+            },
+            likes:{
+                select:{
+                    id:true,
+                    username:true
                 }
             }
+                }
+            },
+            parent:{
+                select:{id:true}
+            },
+        }
         })
         if(!post){
             throw new Error("no post with correspond id")

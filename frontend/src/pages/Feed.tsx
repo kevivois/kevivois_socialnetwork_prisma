@@ -100,20 +100,8 @@ const Feed = () => {
             </div>
 
             {commentPostId === post.id ? (
-              <div className="mt-4 space-y-4">
-                <CreatePost onPostCreated={fetchPosts} parent={commentPostId} />
-                {post.childrens?.map((child:any) => (
-                  <div
-                    key={child.id}
-                    className="ml-4 px-4 py-2 border-l-4 border-blue-200 bg-blue-50 rounded"
-                  >
-                    <p className="text-sm text-gray-700">{child.content}</p>
-                    <p className="text-xs text-gray-400">
-                      — {child.author.username},{" "}
-                      {new Date(child.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                ))}
+              <div className="mt-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+                <CreatePost  onPostCreated={fetchPosts} parent={commentPostId} />
               </div>
             ) : null}
           </div>
